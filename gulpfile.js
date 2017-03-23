@@ -5,7 +5,9 @@ var concat = require('gulp-concat');
 var plumber = require('gulp-plumber');
 var path    = require("path");
 var DEST = "dist/js";
-var SRC = "src/js/*.js";
+var SRC = ["src/js/jquery.emojiarea.js", "src/js/nanoscroller.js",
+"src/js/util.js", "src/js/config.js", "src/js/app.js",
+"src/js/emojiFilters.js", "src/js/emojiDirectives.js"];
 var SRC_CSS = "src/css/*.css";
 
 /**

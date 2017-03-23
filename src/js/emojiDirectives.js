@@ -101,16 +101,7 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
                 }
 
             });
-
-        // $(submitBtn).on('mousedown touchstart', function(e)
-        // {
-        //     $timeout.cancel(updatePromise);
-        //     updateValue();
-        //     $scope.draftMessage.replyToUser();
-        //     resetTyping();
-        //     return cancelEvent(e);
-        // });
-
+            
         function resetTyping()
         {
             // lastTyping = 0;
