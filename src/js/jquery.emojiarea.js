@@ -110,6 +110,8 @@
 	util.replaceSelection = (function() {
 		if (window.getSelection) {
 			return function(content) {
+				console.log("CONTENT");
+				console.log(content);
 				var range, sel = window.getSelection();
 				var node = typeof content === 'string' ? document
 						.createTextNode(content) : content;
@@ -131,6 +133,8 @@
 			}
 		} else if (document.selection && document.selection.createRange) {
 			return function(content) {
+				console.log("CONTENT");
+				console.log(content);
 				var range = document.selection.createRange();
 				if (typeof content === 'string') {
 					range.text = content;
@@ -276,7 +280,7 @@
 				+ xoffset + 'px ' + yoffset + 'px no-repeat;';
 		style += 'background-size:' + scaledWidth + 'px ' + scaledHeight
 				+ 'px;';
-		return '<img src="/dist/images/blank.gif" class="img" style="'
+		return '<img src="images/blank.gif" class="img" style="'
 				+ style + '" alt="' + util.htmlEntities(name) + '">';
 	};
 
@@ -442,13 +446,14 @@
 		 * implementation of createIcon function.
 		 */
 		console.log("insert wysiwyg");
+		console.log($.emojiarea);
+		console.log($.emojiarea.icons[emoji]);
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
 		if ($img[0].attachEvent) {
 			$img[0].attachEvent('onresizestart', function(e) {
 				e.returnValue = false;
 			}, false);
 		}
-
 		this.$editor.trigger('focus');
 		if (this.selection) {
 			util.restoreSelection(this.selection);

@@ -7,7 +7,8 @@ var emojiApp = angular.module("emojiApp", ['ngSanitize']);
 emojiApp.config(['$sceProvider', function($sceProvider)
 {
 
-  $sceProvider.enabled(false);
+   $sceProvider.enabled(false);
+   // $sceProvider.enabled(true);
 
     var icons = {},
         reverseIcons = {},
@@ -29,7 +30,7 @@ emojiApp.config(['$sceProvider', function($sceProvider)
         }
     }
 
-    $.emojiarea.spritesheetPath = '/dist/images/emojisprite_!.png';
+    $.emojiarea.spritesheetPath = 'images/emojisprite_!.png';
     $.emojiarea.spritesheetDimens = Config.EmojiCategorySpritesheetDimens;
     $.emojiarea.iconSize = 20;
     $.emojiarea.icons = icons;
@@ -47,6 +48,8 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 
       // Specify how UI should be updated
       ngModel.$render = function() {
+        console.log("check model");
+        console.log(ngModel.$viewValue);
         element.html(ngModel.$viewValue || '');
       };
 
@@ -60,6 +63,8 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
       // Write data to the model
       function read() {
         var html = element.html();
+        console.log("from read function");
+        console.log(html);
         // When we clear the content editable the browser leaves a <br>
         // behind
         // If strip-br attribute is provided then we strip this out
