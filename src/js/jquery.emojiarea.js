@@ -446,6 +446,7 @@
 		 * implementation of createIcon function.
 		 */
 		console.log("insert wysiwyg");
+		console.log("line 449");
 		console.log($.emojiarea);
 		console.log($.emojiarea.icons[emoji]);
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
@@ -705,7 +706,8 @@
 
 	EmojiMenu.prototype.onItemSelected = function(emoji) {
 		console.log("select");
-		this.emojiarea.insert(emoji);
+		// this.emojiarea.insert(emoji);
+		$.emojiarea.insert(emoji);
 	};
 
 	/*
