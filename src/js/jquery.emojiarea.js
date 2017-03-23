@@ -280,7 +280,7 @@
 				+ xoffset + 'px ' + yoffset + 'px no-repeat;';
 		style += 'background-size:' + scaledWidth + 'px ' + scaledHeight
 				+ 'px;';
-		return '<img src="images/blank.gif" class="img" style="'
+		return '<img src="dist/images/blank.gif" class="img" style="'
 				+ style + '" alt="' + util.htmlEntities(name) + '">';
 	};
 
