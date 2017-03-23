@@ -441,15 +441,13 @@
 
 	EmojiArea_WYSIWYG.prototype.insert = function(emoji) {
 		var content;
-		var el = this;
 		/*
 		 * MODIFICATION: Following line was modified by Andre Staltz, to use new
 		 * implementation of createIcon function.
 		 */
 		console.log("insert wysiwyg");
 		console.log("line 450");
-		console.log(el.emojiarea);
-		console.log(el.emojiarea.icons[emoji]);
+		console.log($.emojiarea);
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
 		if ($img[0].attachEvent) {
 			$img[0].attachEvent('onresizestart', function(e) {
@@ -556,6 +554,9 @@
 		var $window = $(window);
 
 		this.visible = false;
+		console.log("SETTING EMOJIAREA TO FALSE");
+		console.log(self.emojiarea);
+		// console.log(emojiarea);
 		this.emojiarea = null;
 		this.$menu = $('<div>');
 		this.$menu.addClass('emoji-menu');
