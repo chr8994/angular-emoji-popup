@@ -52,6 +52,7 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 
       // Listen for change events to enable binding
       element.on('blur keyup change', function() {
+        console.log("change event");
         scope.$evalAsync(read);
       });
       read(); // initialize
@@ -70,4 +71,3 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
     }
   };
 } ]);
-
