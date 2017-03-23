@@ -3,8 +3,11 @@
   <link href="css/main.min.css" type="text/css" rel="stylesheet" />
 </head>
 <body ng-controller="emojiController">
-<div emoji-form emoji-message="emojiMessage" style="margin-top:100px; margin-left:200px">
-    <textarea id="messageInput" ng-model="emojiMessage.messagetext"></textarea>
+{{emojiMessage.messagetext}}
+<br /><br />
+{{content}}
+<div emoji-form emoji-message="emojiMessage" on-submit="updateValues" style="margin-top:100px; margin-left:200px">
+    <textarea id="messageInput" ng-model="content['0']"></textarea>
     <button id="emojibtn">
         <i class="icon icon-emoji"></i>
     </button>
@@ -27,7 +30,17 @@ angular.module("demoApp").config(function($sceProvider) {
 });
 
 emojiApp.controller('emojiController', ['$scope', function($scope) {
-    $scope.emojiMessage={};
+    $scope.emojiMessage = {};
+    $scope.content = {};
+    $scope.content['0'] = "asdfasdf asfafasdasda :smile:";
+    $scope.updateValues = function(attrs, evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      console.log(evt.target.innerHTML);
+      console.log("ATTRS");
+      console.log(attrs);
+      evt.target.innerHTML = "";
+    };
 }]);
 
 angular.element(document).ready(function() {
