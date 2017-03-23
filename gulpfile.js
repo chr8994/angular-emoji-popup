@@ -18,7 +18,6 @@ gulp.task('core-js', function() {
      return gulp.src(SRC)
             .pipe(plumber())
             .pipe(concat('main.min.js'))
-            .pipe(uglify())
             .pipe(gulp.dest('dist/js'));
 });
 gulp.task('core-css', function() {
