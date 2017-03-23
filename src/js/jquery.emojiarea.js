@@ -446,8 +446,8 @@
 		 * implementation of createIcon function.
 		 */
 		console.log("insert wysiwyg");
-		console.log("line 450");
-		console.log($.emojiarea);
+		console.log("line 449 from window");
+		console.log(window.$.emojiarea);
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
 		if ($img[0].attachEvent) {
 			$img[0].attachEvent('onresizestart', function(e) {
