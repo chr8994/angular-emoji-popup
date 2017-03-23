@@ -441,6 +441,7 @@
 		 * MODIFICATION: Following line was modified by Andre Staltz, to use new
 		 * implementation of createIcon function.
 		 */
+		console.log("insert wysiwyg");
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
 		if ($img[0].attachEvent) {
 			$img[0].attachEvent('onresizestart', function(e) {
