@@ -447,9 +447,7 @@
 		 */
 		console.log("insert wysiwyg");
 		console.log("line 449 from window");
-		if(!$.emojiarea) {
-			$.emojiarea = window.$.emojiarea;
-		}
+		console.log($.emojiarea);
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
 		if ($img[0].attachEvent) {
 			$img[0].attachEvent('onresizestart', function(e) {
