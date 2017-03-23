@@ -706,8 +706,8 @@
 
 	EmojiMenu.prototype.onItemSelected = function(emoji) {
 		console.log("select");
-		// this.emojiarea.insert(emoji);
-		$.emojiarea.insert(emoji);
+		this.emojiarea.insert(emoji);
+		// $.emojiarea.insert(emoji);
 	};
 
 	/*
