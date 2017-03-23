@@ -302,6 +302,7 @@
 	};
 
 	EmojiArea_Plain.prototype.insert = function(emoji) {
+		console.log("on insert function");
 		if (!$.emojiarea.icons.hasOwnProperty(emoji))
 			return;
 		util.insertAtCursor(emoji, this.$textarea[0]);
@@ -697,6 +698,7 @@
 	/* ! MODIFICATION END */
 
 	EmojiMenu.prototype.onItemSelected = function(emoji) {
+		console.log("select");
 		this.emojiarea.insert(emoji);
 	};
 
