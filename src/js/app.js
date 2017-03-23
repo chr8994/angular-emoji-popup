@@ -29,7 +29,7 @@ emojiApp.config(['$sceProvider', function($sceProvider)
         }
     }
 
-    $.emojiarea.spritesheetPath = 'img/emojisprite_!.png';
+    $.emojiarea.spritesheetPath = '/dist/images/emojisprite_!.png';
     $.emojiarea.spritesheetDimens = Config.EmojiCategorySpritesheetDimens;
     $.emojiarea.iconSize = 20;
     $.emojiarea.icons = icons;
