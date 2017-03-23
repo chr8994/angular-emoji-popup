@@ -70,7 +70,9 @@
 	var util = {};
 
 	util.restoreSelection = (function() {
+		console.log("RESTORE SELECTION!!!!!!!!!!!!!!!");
 		if (window.getSelection) {
+
 			return function(savedSelection) {
 				var sel = window.getSelection();
 				sel.removeAllRanges();
@@ -110,30 +112,32 @@
 	util.replaceSelection = (function() {
 		if (window.getSelection) {
 			return function(content) {
-				console.log("CONTENT");
-				console.log(content);
 				var range, sel = window.getSelection();
+
 				var node = typeof content === 'string' ? document
 						.createTextNode(content) : content;
+				console.log("NODE!");
+				console.log(node);
 				if (sel.getRangeAt && sel.rangeCount) {
 					range = sel.getRangeAt(0);
 					range.deleteContents();
 					range.insertNode(document.createTextNode(' '));
 					range.insertNode(node);
 					range.setStart(node, 0);
-
 					window.setTimeout(function() {
 						range = document.createRange();
 						range.setStartAfter(node);
 						range.collapse(true);
 						sel.removeAllRanges();
 						sel.addRange(range);
+						console.log("ADDING RANGE");
+						console.log(range);
 					}, 0);
 				}
 			}
 		} else if (document.selection && document.selection.createRange) {
 			return function(content) {
-				console.log("CONTENT");
+				console.log("CONTENT IN ELSE");
 				console.log(content);
 				var range = document.selection.createRange();
 				if (typeof content === 'string') {
@@ -381,6 +385,9 @@
 		 */
 
 		var html = this.$editor.text();
+		console.log("LINE 384");
+		console.log(html);
+		// var html = this.$editor.html();
 		var emojis = $.emojiarea.icons;
 		for ( var key in emojis) {
 			if (emojis.hasOwnProperty(key)) {

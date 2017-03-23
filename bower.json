@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "homepage": "https://github.com/newhomestar/angular-emoji-popup.git",
   "description": "Angular based Emoji Popup along with filters for encoding/decoding emojis",
-  "main": ["dist/js/main.min.js", "dist/css/main.min.css"],
+  "main": ["dist/js/config.js", "dist/js/emoji.min.js", "dist/css/main.min.css"],
   "keywords": [
     "angular",
     "emoji"

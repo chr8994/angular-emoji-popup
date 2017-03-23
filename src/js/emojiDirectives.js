@@ -101,7 +101,7 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
                 }
 
             });
-            
+
         function resetTyping()
         {
             // lastTyping = 0;
@@ -254,6 +254,7 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
     restrict : 'A', // only activate on element attribute
     require : '?ngModel', // get a hold of NgModelController
     link : function(scope, element, attrs, ngModel) {
+
       if (!ngModel)
         return; // do nothing if no ng-model
 
@@ -270,7 +271,9 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 
       // Write data to the model
       function read() {
+        console.log("FROM READY!!!");
         var html = element.html();
+        console.log(html);
         // When we clear the content editable the browser leaves a <br>
         // behind
         // If strip-br attribute is provided then we strip this out
