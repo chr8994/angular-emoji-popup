@@ -12,7 +12,7 @@
         <i class="icon icon-emoji"></i>
     </button>
 </div>
-<h1 ng-click="showTest = true;">Testing</h1>
+<h1 ng-click="showTest = !showTest;">Testing</h1>
 <div ng-if="showTest">
   <div emoji-form emoji-message="emojiMessageTest" on-submit="updateValues" style="margin-top:100px; margin-left:200px">
       <textarea id="messageInput" ng-model="content['0']"></textarea>
