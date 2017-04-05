@@ -8,7 +8,7 @@
 {{content}}
 <div emoji-form emoji-message="emojiMessage" on-submit="updateValues" style="margin-top:100px; margin-left:200px">
     <textarea id="messageInput" ng-model="content['0']"></textarea>
-    <button id="emojibtn">
+    <button id="emojibtn" data-position="top">
         <i class="icon icon-emoji"></i>
     </button>
 </div>
@@ -16,7 +16,7 @@
 <div ng-if="showTest">
   <div emoji-form emoji-message="emojiMessageTest" on-submit="updateValues" style="margin-top:100px; margin-left:200px">
       <textarea id="messageInput" ng-model="content['0']"></textarea>
-      <button id="emojibtn">
+      <button id="emojibtn" position="top">
           <i class="icon icon-emoji"></i>
       </button>
   </div>

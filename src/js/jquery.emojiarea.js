@@ -254,7 +254,7 @@
 		}
 
 		$button.on('click', function(e) {
-			EmojiMenu.show(self);
+			EmojiMenu.show(self, $button);
 			e.stopPropagation();
 		});
 
@@ -831,8 +831,8 @@
 
 	EmojiMenu.show = (function() {
 		var menu = null;
-		return function(emojiarea) {
-			menu = menu || new EmojiMenu();
+		return function(emojiarea, $button) {
+			menu = new EmojiMenu($button);
 			menu.show(emojiarea);
 		};
 	})();
