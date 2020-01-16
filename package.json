@@ -1,9 +1,13 @@
 {
   "name": "angular-emoji-popup-nhc",
-  "version": "1.0.0",
+  "version": "1.20.7",
   "homepage": "https://github.com/newhomestar/angular-emoji-popup.git",
   "description": "Angular based Emoji Popup along with filters for encoding/decoding emojis",
-  "main": ["dist/js/config.js", "dist/js/emoji.min.js", "dist/css/main.min.css"],
+  "main": [
+    "dist/js/config.js",
+    "dist/js/emoji.min.js",
+    "dist/css/main.min.css"
+  ],
   "keywords": [
     "angular",
     "emoji"
@@ -11,5 +15,8 @@
   "authors": [
     "madhur"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ng-sanitize": "~0.0.2"
+  }
 }
