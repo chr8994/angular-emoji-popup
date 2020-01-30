@@ -1,3 +1,5 @@
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
 'use strict';
 var Config = {};
 Config.Emoji = {
@@ -3540,4 +3542,2467 @@ function buildMap()
     }
 }
 
-module.exports = Config;
+
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
+'use strict';
+
+var emojiApp = angular.module("emojiApp", ['ngSanitize']);
+
+emojiApp.config(['$sceProvider', function($sceProvider)
+{
+
+   $sceProvider.enabled(false);
+   // $sceProvider.enabled(true);
+
+    var icons = {},
+        reverseIcons = {},
+        i, j, hex, name, dataItem, row, column, totalColumns;
+
+    for (j = 0; j < Config.EmojiCategories.length; j++)
+    {
+        totalColumns = Config.EmojiCategorySpritesheetDimens[j][1];
+        for (i = 0; i < Config.EmojiCategories[j].length; i++)
+        {
+            dataItem = Config.Emoji[Config.EmojiCategories[j][i]];
+            name = dataItem[1][0];
+            row = Math.floor(i / totalColumns);
+            column = (i % totalColumns);
+            icons[':' + name + ':'] = [j, row, column,
+                ':' + name + ':'
+            ];
+            reverseIcons[name] = dataItem[0];
+        }
+    }
+
+    $.emojiarea.spritesheetPath = 'images/emojisprite_!.png';
+    $.emojiarea.spritesheetDimens = Config.EmojiCategorySpritesheetDimens;
+    $.emojiarea.iconSize = 20;
+    $.emojiarea.icons = icons;
+    $.emojiarea.reverseIcons = reverseIcons;
+
+}]);
+
+emojiApp.directive('contenteditable', [ '$sce', function($sce) {
+  return {
+    restrict : 'A', // only activate on element attribute
+    require : '?ngModel', // get a hold of NgModelController
+    link : function(scope, element, attrs, ngModel) {
+      if (!ngModel)
+        return; // do nothing if no ng-model
+
+      // Specify how UI should be updated
+      ngModel.$render = function() {
+        console.log("check model");
+        console.log(ngModel.$viewValue);
+        element.html(ngModel.$viewValue || '');
+      };
+
+      // Listen for change events to enable binding
+      element.on('blur keyup change', function() {
+        console.log("change event");
+        scope.$evalAsync(read);
+      });
+      read(); // initialize
+
+      // Write data to the model
+      function read() {
+        var html = element.html();
+        console.log("from read function");
+        console.log(html);
+        // When we clear the content editable the browser leaves a <br>
+        // behind
+        // If strip-br attribute is provided then we strip this out
+        if (attrs.stripBr && html == '<br>') {
+          html = '';
+        }
+        ngModel.$setViewValue(html);
+      }
+    }
+  };
+} ]);
+
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
+'use strict';
+emojiApp.filter('colonToCode', function() {
+
+	return function(input) {
+
+		if(!input)
+			return "";
+
+		if(!Config.rx_colons)
+			Config.init_unified();
+
+		 return input.replace(Config.rx_colons, function(m)
+        {
+            var val = Config.mapcolon[m];
+            if (val)
+            {
+                return val;
+            }
+            else
+                return "";
+        });
+
+	};
+});
+
+emojiApp.filter('codeToSmiley', function() {
+
+	return function(input) {
+
+		if(!input)
+			return "";
+
+		if(!Config.rx_codes)
+			Config.init_unified();
+
+		 return input.replace(Config.rx_codes, function(m)
+        {
+            var val = Config.reversemap[m];
+			if (val) {
+				val = ":" + val + ":";
+
+				var $img = $.emojiarea.createIcon($.emojiarea.icons[val]);
+				return $img;
+			}
+			else
+				return "";
+        });
+
+	};
+});
+
+
+emojiApp.filter('colonToSmiley', function() {
+
+	return function(input) {
+
+		if(!input)
+			return "";
+
+		if(!Config.rx_colons)
+			Config.init_unified();
+
+		 return input.replace(Config.rx_colons, function(m)
+        {
+            if (m)
+            {
+                var $img = $.emojiarea.createIcon($.emojiarea.icons[m]);
+                return $img;
+            }
+            else
+                return "";
+        });
+
+	};
+});
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
+'use strict';
+
+
+emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile', function($timeout, $http, $interpolate, $compile)
+{
+    return {
+        scope:
+        {
+            emojiMessage: '='
+        },
+        link: link
+    };
+
+    function link($scope, element, attrs)
+    {
+        var messageField = $('textarea', element)[0],
+            fileSelects = $('input', element),
+            emojiButton = $('#emojibtn', element)[0],
+            submitBtn = $('#submitBtn', element)[0],
+            editorElement = messageField,
+            emojiArea = $(messageField).emojiarea(
+            {
+                button: emojiButton,
+                norealTime: true
+            }),
+            emojiMenu = $('.emoji-menu', element)[0],
+            richTextarea = $(
+                '.emoji-wysiwyg-editor', element)[0];
+
+            var s = $compile($("#messageDiv"));
+            $("#messageDiv").replaceWith(s($scope));
+
+
+        if (richTextarea)
+        {
+            editorElement = richTextarea;
+            $(richTextarea).addClass('form-control');
+
+            if($(messageField).attr('placeholder'))
+                $(richTextarea).attr('placeholder',$interpolate($(messageField).attr('placeholder'))($scope));
+
+            var updatePromise;
+            $(richTextarea)
+                .on('DOMNodeInserted', onPastedImageEvent)
+                .on(
+                    'keyup',
+                    function(e)
+                    {
+                        updateHeight();
+
+                        if (!sendAwaiting)
+                        {
+                            $scope
+                                .$apply(function()
+                                {
+                                    $scope.emojiMessage.messagetext = richTextarea.textContent;
+                                });
+                        }
+
+                        $timeout.cancel(updatePromise);
+                        updatePromise = $timeout(
+                            updateValue, 1000);
+
+                    });
+        }
+
+        var sendOnEnter = true;
+
+        $(editorElement).on(
+            'keydown',
+            function(e)
+            {
+                if (richTextarea)
+                {
+                    updateHeight();
+                }
+
+                if (e.keyCode == 13)
+                {
+                    var submit = false;
+                    if (sendOnEnter && !e.shiftKey)
+                    {
+                        submit = true;
+                    }
+                    else if (!sendOnEnter && (e.ctrlKey || e.metaKey))
+                    {
+                        submit = true;
+                    }
+
+                    if (submit)
+                    {
+                        $timeout.cancel(updatePromise);
+                        updateValue();
+                        $scope.emojiMessage.replyToUser();
+                        // $(element).trigger('message_send');
+                        resetTyping();
+                        return cancelEvent(e);
+                    }
+                }
+
+            });
+
+        function resetTyping()
+        {
+            // lastTyping = 0;
+            // lastLength = 0;
+        };
+
+        function updateRichTextarea()
+        {
+            console.log("updateRichTextarea");
+            if (richTextarea)
+            {
+                $timeout.cancel(updatePromise);
+                var html = $('<div>').text(
+                    $scope.draftMessage.text || '').html();
+                html = html.replace(/\n/g, '<br/>');
+                $(richTextarea).html(html);
+                var lastLength = html.length;
+                updateHeight();
+            }
+        }
+
+        function updateValue()
+        {
+            if (richTextarea)
+            {
+                $(richTextarea).trigger('change');
+                updateHeight();
+            }
+        }
+
+        var height = richTextarea.offsetHeight;
+
+        function updateHeight()
+        {
+            var newHeight = richTextarea.offsetHeight;
+            if (height != newHeight)
+            {
+                height = newHeight;
+                $scope.$emit('ui_editor_resize');
+            }
+        };
+
+        function onPastedImageEvent(e)
+        {
+            var element = (e.originalEvent || e).target,
+                src = (element ||
+                {}).src || '',
+                remove = false;
+
+            if (src.substr(0, 5) == 'data:')
+            {
+                remove = true;
+                var blob = dataUrlToBlob(src);
+                ErrorService.confirm(
+                {
+                    type: 'FILE_CLIPBOARD_PASTE'
+                }).then(function()
+                {
+                    $scope.draftMessage.files = [blob];
+                    $scope.draftMessage.isMedia = true;
+                });
+                setZeroTimeout(function()
+                {
+                    element.parentNode.removeChild(element);
+                })
+            }
+            else if (src && !src.match(/img\/blank\.gif/))
+            {
+                var replacementNode = document.createTextNode(' ' + src + ' ');
+                setTimeout(function()
+                {
+                    element.parentNode.replaceChild(replacementNode, element);
+                }, 100);
+            }
+        };
+
+
+        function onPasteEvent(e)
+        {
+            console.log("onPasteEvent");
+            var cData = (e.originalEvent || e).clipboardData,
+                items = cData && cData.items || [],
+                files = [],
+                file, i;
+
+            for (i = 0; i < items.length; i++)
+            {
+                if (items[i].kind == 'file')
+                {
+                    file = items[i].getAsFile();
+                    files.push(file);
+                }
+            }
+
+            if (files.length > 0)
+            {
+                ErrorService.confirm(
+                {
+                    type: 'FILES_CLIPBOARD_PASTE',
+                    files: files
+                }).then(function()
+                {
+                    $scope.draftMessage.files = files;
+                    $scope.draftMessage.isMedia = true;
+                });
+            }
+        }
+
+        function onKeyDown(e)
+        {
+            if (e.keyCode == 9 && !e.shiftKey && !e.ctrlKey && !e.metaKey && !$modalStack.getTop())
+            { // TAB
+                editorElement.focus();
+                return cancelEvent(e);
+            }
+        }
+        $(document).on('keydown', onKeyDown);
+        $(document).on('paste', onPasteEvent);
+
+        var sendAwaiting = false;
+
+        function focusField()
+        {
+            onContentLoaded(function()
+            {
+                editorElement.focus();
+            });
+        }
+
+        $scope.$on('$destroy', function cleanup()
+        {
+
+            $(document).off('paste', onPasteEvent);
+            $(document).off('keydown', onKeyDown);
+            $(submitBtn).off('mousedown')
+            fileSelects.off('change');
+            if (richTextarea)
+            {
+                $(richTextarea).off('DOMNodeInserted keyup',
+                    onPastedImageEvent);
+            }
+            $(editorElement).off('keydown');
+        });
+    }
+}]);
+
+
+emojiApp.directive('contenteditable', [ '$sce', function($sce) {
+  return {
+    restrict : 'A', // only activate on element attribute
+    require : '?ngModel', // get a hold of NgModelController
+    link : function(scope, element, attrs, ngModel) {
+
+      if (!ngModel)
+        return; // do nothing if no ng-model
+
+      // Specify how UI should be updated
+      ngModel.$render = function() {
+        element.html(ngModel.$viewValue || '');
+      };
+
+      // Listen for change events to enable binding
+      element.on('blur keyup change', function() {
+        scope.$evalAsync(read);
+      });
+      read(); // initialize
+
+      // Write data to the model
+      function read() {
+        console.log("FROM READY!!!");
+        var html = element.html();
+        console.log(html);
+        // When we clear the content editable the browser leaves a <br>
+        // behind
+        // If strip-br attribute is provided then we strip this out
+        if (attrs.stripBr && html == '<br>') {
+          html = '';
+        }
+        ngModel.$setViewValue(html);
+      }
+    }
+  };
+} ]);
+
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
+/**
+ * emojiarea - A rich textarea control that supports emojis, WYSIWYG-style.
+ * Copyright (c) 2012 DIY Co
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at:
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+ * ANY KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ *
+ * @author Brian Reavis <brian@diy.org>
+ */
+
+/**
+ * This file also contains some modifications by Igor Zhukov in order to add
+ * custom scrollbars to EmojiMenu See keyword `MODIFICATION` in source code.
+ */
+
+(function($, window, document) {
+
+	var ELEMENT_NODE = 1;
+	var TEXT_NODE = 3;
+	var TAGS_BLOCK = [ 'p', 'div', 'pre', 'form' ];
+	var KEY_ESC = 27;
+	var KEY_TAB = 9;
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	/*
+	 * ! MODIFICATION START Options 'spritesheetPath', 'spritesheetDimens',
+	 * 'iconSize' added by Andre Staltz.
+	 */
+	$.emojiarea = {
+		path : '',
+		spritesheetPath : '',
+		spritesheetDimens : [],
+		iconSize : 20,
+		icons : {},
+		defaults : {
+			button : null,
+			buttonLabel : 'Emojis',
+			buttonPosition : 'after'
+		}
+	};
+	var defaultRecentEmojis = ':joy:,:kissing_heart:,:heart:,:heart_eyes:,:blush:,:grin:,:+1:,:relaxed:,:pensive:,:smile:,:sob:,:kiss:,:unamused:,:flushed:,:stuck_out_tongue_winking_eye:,:see_no_evil:,:wink:,:smiley:,:cry:,:stuck_out_tongue_closed_eyes:,:scream:,:rage:,:smirk:,:disappointed:,:sweat_smile:,:kissing_closed_eyes:,:speak_no_evil:,:relieved:,:grinning:,:yum:,:laughing:,:ok_hand:,:neutral_face:,:confused:'
+			.split(',');
+	/* ! MODIFICATION END */
+
+	$.fn.emojiarea = function(options) {
+		options = $.extend({}, $.emojiarea.defaults, options);
+		return this
+				.each(function() {
+					var $textarea = $(this);
+					if ('contentEditable' in document.body
+							&& options.wysiwyg !== false) {
+						new EmojiArea_WYSIWYG($textarea, options);
+					} else {
+						new EmojiArea_Plain($textarea, options);
+					}
+				});
+	};
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	var util = {};
+
+	util.restoreSelection = (function() {
+		console.log("RESTORE SELECTION!!!!!!!!!!!!!!!");
+		if (window.getSelection) {
+
+			return function(savedSelection) {
+				var sel = window.getSelection();
+				sel.removeAllRanges();
+				for (var i = 0, len = savedSelection.length; i < len; ++i) {
+					sel.addRange(savedSelection[i]);
+				}
+			};
+		} else if (document.selection && document.selection.createRange) {
+			return function(savedSelection) {
+				if (savedSelection) {
+					savedSelection.select();
+				}
+			};
+		}
+	})();
+
+	util.saveSelection = (function() {
+		if (window.getSelection) {
+			return function() {
+				var sel = window.getSelection(), ranges = [];
+				if (sel.rangeCount) {
+					for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+						ranges.push(sel.getRangeAt(i));
+					}
+				}
+				return ranges;
+			};
+		} else if (document.selection && document.selection.createRange) {
+			return function() {
+				var sel = document.selection;
+				return (sel.type.toLowerCase() !== 'none') ? sel.createRange()
+						: null;
+			};
+		}
+	})();
+
+	util.replaceSelection = (function() {
+		if (window.getSelection) {
+			return function(content) {
+				var range, sel = window.getSelection();
+
+				var node = typeof content === 'string' ? document
+						.createTextNode(content) : content;
+				console.log("NODE!");
+				console.log(node);
+				if (sel.getRangeAt && sel.rangeCount) {
+					range = sel.getRangeAt(0);
+					range.deleteContents();
+					range.insertNode(document.createTextNode(' '));
+					range.insertNode(node);
+					range.setStart(node, 0);
+					window.setTimeout(function() {
+						range = document.createRange();
+						range.setStartAfter(node);
+						range.collapse(true);
+						sel.removeAllRanges();
+						sel.addRange(range);
+						console.log("ADDING RANGE");
+						console.log(range);
+					}, 0);
+				}
+			}
+		} else if (document.selection && document.selection.createRange) {
+			return function(content) {
+				console.log("CONTENT IN ELSE");
+				console.log(content);
+				var range = document.selection.createRange();
+				if (typeof content === 'string') {
+					range.text = content;
+				} else {
+					range.pasteHTML(content.outerHTML);
+				}
+			}
+		}
+	})();
+
+	util.insertAtCursor = function(text, el) {
+		text = ' ' + text;
+		var val = el.value, endIndex, startIndex, range;
+		if (typeof el.selectionStart != 'undefined'
+				&& typeof el.selectionEnd != 'undefined') {
+			startIndex = el.selectionStart;
+			endIndex = el.selectionEnd;
+			el.value = val.substring(0, startIndex) + text
+					+ val.substring(el.selectionEnd);
+			el.selectionStart = el.selectionEnd = startIndex + text.length;
+		} else if (typeof document.selection != 'undefined'
+				&& typeof document.selection.createRange != 'undefined') {
+			el.focus();
+			range = document.selection.createRange();
+			range.text = text;
+			range.select();
+		}
+	};
+
+	util.extend = function(a, b) {
+		if (typeof a === 'undefined' || !a) {
+			a = {};
+		}
+		if (typeof b === 'object') {
+			for ( var key in b) {
+				if (b.hasOwnProperty(key)) {
+					a[key] = b[key];
+				}
+			}
+		}
+		return a;
+	};
+
+	util.escapeRegex = function(str) {
+		return (str + '').replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1');
+	};
+
+	util.htmlEntities = function(str) {
+		return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	};
+
+	/*
+	 * ! MODIFICATION START This function was added by Igor Zhukov to save
+	 * recent used emojis.
+	 */
+	util.emojiInserted = function(emojiKey, menu) {
+		ConfigStorage.get('emojis_recent', function(curEmojis) {
+			curEmojis = curEmojis || defaultRecentEmojis || [];
+
+			var pos = curEmojis.indexOf(emojiKey);
+			if (!pos) {
+				return false;
+			}
+			if (pos != -1) {
+				curEmojis.splice(pos, 1);
+			}
+			curEmojis.unshift(emojiKey);
+			if (curEmojis.length > 42) {
+				curEmojis = curEmojis.slice(42);
+			}
+
+			ConfigStorage.set({
+				emojis_recent : curEmojis
+			});
+		})
+	};
+	/* ! MODIFICATION END */
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	var EmojiArea = function() {
+	};
+
+	EmojiArea.prototype.setup = function() {
+		var self = this;
+
+		this.$editor.on('focus', function() {
+			self.hasFocus = true;
+		});
+		this.$editor.on('blur', function() {
+			self.hasFocus = false;
+		});
+
+		this.setupButton();
+	};
+
+	EmojiArea.prototype.setupButton = function() {
+		var self = this;
+		var $button;
+
+		if (this.options.button) {
+			$button = $(this.options.button);
+		} else if (this.options.button !== false) {
+			$button = $('<a href="javascript:void(0)">');
+			$button.html(this.options.buttonLabel);
+			$button.addClass('emoji-button');
+			$button.attr({
+				title : this.options.buttonLabel
+			});
+			this.$editor[this.options.buttonPosition]($button);
+		} else {
+			$button = $('');
+		}
+
+		$button.on('click', function(e) {
+			EmojiMenu.show(self);
+			e.stopPropagation();
+		});
+
+		this.$button = $button;
+	};
+
+	/*
+	 * ! MODIFICATION START This function was modified by Andre Staltz so that
+	 * the icon is created from a spritesheet.
+	 */
+	EmojiArea.createIcon = function(emoji, menu) {
+		var category = emoji[0];
+		var row = emoji[1];
+		var column = emoji[2];
+		var name = emoji[3];
+		var filename = $.emojiarea.spritesheetPath;
+		var iconSize = menu && Config.Mobile ? 26 : $.emojiarea.iconSize
+		var xoffset = -(iconSize * column);
+		var yoffset = -(iconSize * row);
+		var scaledWidth = ($.emojiarea.spritesheetDimens[category][1] * iconSize);
+		var scaledHeight = ($.emojiarea.spritesheetDimens[category][0] * iconSize);
+
+		var style = 'display:inline-block;';
+		style += 'width:' + iconSize + 'px;';
+		style += 'height:' + iconSize + 'px;';
+		style += 'background:url(\'' + filename.replace('!', category) + '\') '
+				+ xoffset + 'px ' + yoffset + 'px no-repeat;';
+		style += 'background-size:' + scaledWidth + 'px ' + scaledHeight
+				+ 'px;';
+		return '<img src="dist/images/blank.gif" class="img" style="'
+				+ style + '" alt="' + util.htmlEntities(name) + '">';
+	};
+
+	$.emojiarea.createIcon = EmojiArea.createIcon;
+	/* ! MODIFICATION END */
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	/**
+	 * Editor (plain-text)
+	 *
+	 * @constructor
+	 * @param {object}
+	 *            $textarea
+	 * @param {object}
+	 *            options
+	 */
+
+	var EmojiArea_Plain = function($textarea, options) {
+		this.options = options;
+		this.$textarea = $textarea;
+		this.$editor = $textarea;
+		this.setup();
+	};
+
+	EmojiArea_Plain.prototype.insert = function(emoji) {
+		console.log("on insert function");
+		if (!$.emojiarea.icons.hasOwnProperty(emoji))
+			return;
+		util.insertAtCursor(emoji, this.$textarea[0]);
+		/*
+		 * MODIFICATION: Following line was added by Igor Zhukov, in order to
+		 * save recent emojis
+		 */
+		util.emojiInserted(emoji, this.menu);
+		this.$textarea.trigger('change');
+	};
+
+	EmojiArea_Plain.prototype.val = function() {
+		return this.$textarea.val();
+	};
+
+	util.extend(EmojiArea_Plain.prototype, EmojiArea.prototype);
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	/**
+	 * Editor (rich)
+	 *
+	 * @constructor
+	 * @param {object}
+	 *            $textarea
+	 * @param {object}
+	 *            options
+	 */
+
+	var EmojiArea_WYSIWYG = function($textarea, options) {
+		var self = this;
+
+		this.options = options || {};
+		this.$textarea = $textarea;
+		this.$editor = $('<div>').addClass('emoji-wysiwyg-editor');
+		this.$editor.text($textarea.val());
+		this.$editor.attr({
+			contenteditable : 'true',
+			id : 'messageDiv',
+			'ng-model': 'emojiMessage.rawhtml'
+		});
+		// this.$editor.attr({'ng-enter': 'replyToUser()'});
+
+		/*
+		 * ! MODIFICATION START Following code was modified by Igor Zhukov, in
+		 * order to improve rich text paste
+		 */
+		var changeEvents = 'blur change';
+		if (!this.options.norealTime) {
+			changeEvents += ' keyup';
+		}
+		this.$editor.on(changeEvents, function(e) {
+			return self.onChange.apply(self, [ e ]);
+		});
+		this.$editor.on('paste', function(e) {
+			return self.onPaste.apply(self, [ e ]);
+		});
+		/* ! MODIFICATION END */
+
+		this.$editor.on('mousedown focus', function() {
+			document.execCommand('enableObjectResizing', false, false);
+		});
+		this.$editor.on('blur', function() {
+			document.execCommand('enableObjectResizing', true, true);
+		});
+
+		/*
+		 * this.$editor.on("keydown keypress", function(event) { if (event.which
+		 * === 13) { console.log("pressed enter");
+		 * angular.element(document.getElementById('bodyId')).scope().replyToUser();
+		 * event.preventDefault(); } });
+		 */
+
+		var html = this.$editor.text();
+		console.log("LINE 384");
+		console.log(html);
+		// var html = this.$editor.html();
+		var emojis = $.emojiarea.icons;
+		for ( var key in emojis) {
+			if (emojis.hasOwnProperty(key)) {
+				/*
+				 * MODIFICATION: Following line was modified by Andre Staltz, to
+				 * use new implementation of createIcon function.
+				 */
+				html = html.replace(new RegExp(util.escapeRegex(key), 'g'),
+						EmojiArea.createIcon(emojis[key]));
+			}
+		}
+		this.$editor.html(html);
+
+		$textarea.hide().after(this.$editor);
+
+		this.setup();
+
+		/*
+		 * MODIFICATION: Following line was modified by Igor Zhukov, in order to
+		 * improve emoji insert behaviour
+		 */
+		$(document.body).on('mousedown', function() {
+			if (self.hasFocus) {
+				self.selection = util.saveSelection();
+			}
+		});
+	};
+
+	/*
+	 * ! MODIFICATION START Following code was modified by Igor Zhukov, in order
+	 * to improve rich text paste
+	 */
+	EmojiArea_WYSIWYG.prototype.onPaste = function(e) {
+		var cData = (e.originalEvent || e).clipboardData, items = cData
+				&& cData.items || [], i;
+		for (i = 0; i < items.length; i++) {
+			if (items[i].kind == 'file') {
+				e.preventDefault();
+				return true;
+			}
+		}
+
+		var text = (e.originalEvent || e).clipboardData.getData('text/plain'), self = this;
+		setTimeout(function() {
+			self.onChange();
+		}, 0);
+		if (text.length) {
+			document.execCommand('insertText', false, text);
+			return cancelEvent(e);
+		}
+		return true;
+	};
+	/* ! MODIFICATION END */
+
+	EmojiArea_WYSIWYG.prototype.onChange = function(e) {
+		this.$textarea.val(this.val()).trigger('change');
+	};
+
+	EmojiArea_WYSIWYG.prototype.insert = function(emoji) {
+		var content;
+		/*
+		 * MODIFICATION: Following line was modified by Andre Staltz, to use new
+		 * implementation of createIcon function.
+		 */
+		console.log("insert wysiwyg");
+		console.log("line 449 from window");
+		console.log($.emojiarea);
+		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
+		if ($img[0].attachEvent) {
+			$img[0].attachEvent('onresizestart', function(e) {
+				e.returnValue = false;
+			}, false);
+		}
+		this.$editor.trigger('focus');
+		if (this.selection) {
+			util.restoreSelection(this.selection);
+		}
+		try {
+			util.replaceSelection($img[0]);
+		} catch (e) {
+		}
+
+		/*
+		 * ! MODIFICATION START Following code was modified by Igor Zhukov, in
+		 * order to improve selection handling
+		 */
+		/*
+		 * var self = this; setTimeout(function () { // self.selection =
+		 * util.saveSelection(); }, 100);
+		 */
+		/* ! MODIFICATION END */
+
+		/*
+		 * MODIFICATION: Following line was added by Igor Zhukov, in order to
+		 * save recent emojis
+		 */
+		util.emojiInserted(emoji, this.menu);
+
+		this.onChange();
+	};
+
+	EmojiArea_WYSIWYG.prototype.val = function() {
+		var lines = [];
+		var line = [];
+
+		var flush = function() {
+			lines.push(line.join(''));
+			line = [];
+		};
+
+		var sanitizeNode = function(node) {
+			if (node.nodeType === TEXT_NODE) {
+				line.push(node.nodeValue);
+			} else if (node.nodeType === ELEMENT_NODE) {
+				var tagName = node.tagName.toLowerCase();
+				var isBlock = TAGS_BLOCK.indexOf(tagName) !== -1;
+
+				if (isBlock && line.length)
+					flush();
+
+				if (tagName === 'img') {
+					var alt = node.getAttribute('alt') || '';
+					if (alt) {
+						//var code = alt.substring(1, alt.length - 1);
+						//var smileyCode = Config.map[code];
+
+						//if (smileyCode)
+							line.push(alt);
+
+					}
+					return;
+				} else if (tagName === 'br') {
+					flush();
+				}
+
+				var children = node.childNodes;
+				for (var i = 0; i < children.length; i++) {
+					 sanitizeNode(children[i]);
+				}
+
+				if (isBlock && line.length)
+					flush();
+			}
+		};
+
+		var children = this.$editor[0].childNodes;
+		for (var i = 0; i < children.length; i++) {
+			sanitizeNode(children[i]);
+		}
+
+		if (line.length)
+			flush();
+
+		return lines.join('\n');
+	};
+
+	util.extend(EmojiArea_WYSIWYG.prototype, EmojiArea.prototype);
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	/**
+	 * Emoji Dropdown Menu
+	 *
+	 * @constructor
+	 * @param {object}
+	 *            emojiarea
+	 */
+	var EmojiMenu = function() {
+		var self = this;
+		var $body = $(document.body);
+		var $window = $(window);
+
+		this.visible = false;
+		console.log("SETTING EMOJIAREA TO FALSE");
+		console.log(self.emojiarea);
+		// console.log(emojiarea);
+		this.emojiarea = null;
+		this.$menu = $('<div>');
+		this.$menu.addClass('emoji-menu');
+		this.$menu.hide();
+
+		/*
+		 * ! MODIFICATION START Following code was modified by Igor Zhukov, in
+		 * order to add scrollbars and tail to EmojiMenu Also modified by Andre
+		 * Staltz, to include tabs for categories, on the menu header.
+		 */
+		this.$itemsTailWrap = $('<div class="emoji-items-wrap1"></div>')
+				.appendTo(this.$menu);
+		this.$categoryTabs = $(
+				'<table class="emoji-menu-tabs"><tr>'
+						+ '<td><a class="emoji-menu-tab icon-recent" ></a></td>'
+						+ '<td><a class="emoji-menu-tab icon-smile" ></a></td>'
+						+ '<td><a class="emoji-menu-tab icon-flower"></a></td>'
+						+ '<td><a class="emoji-menu-tab icon-bell"></a></td>'
+						+ '<td><a class="emoji-menu-tab icon-car"></a></td>'
+						+ '<td><a class="emoji-menu-tab icon-grid"></a></td>'
+						+ '</tr></table>').appendTo(this.$itemsTailWrap);
+		this.$itemsWrap = $(
+				'<div class="emoji-items-wrap nano mobile_scrollable_wrap"></div>')
+				.appendTo(this.$itemsTailWrap);
+		this.$items = $('<div class="emoji-items nano-content">').appendTo(
+				this.$itemsWrap);
+		/* ! MODIFICATION END */
+
+		$body.append(this.$menu);
+
+		/*
+		 * ! MODIFICATION: Following 3 lines were added by Igor Zhukov, in order
+		 * to add scrollbars to EmojiMenu
+		 */
+
+		  if (!Config.Mobile) {
+		  this.$itemsWrap.nanoScroller({preventPageScrolling: true, tabIndex:
+		  -1}); }
+
+
+		//this.$itemsWrap.nanoScroller({preventPageScrolling: true, tabIndex:* -1});
+
+		$body.on('keydown', function(e) {
+			if (e.keyCode === KEY_ESC || e.keyCode === KEY_TAB) {
+				self.hide();
+			}
+		});
+
+		/*
+		 * ! MODIFICATION: Following 3 lines were added by Igor Zhukov, in order
+		 * to hide menu on message submit with keyboard
+		 */
+		$body.on('message_send', function(e) {
+			self.hide();
+		});
+
+		$body.on('mouseup', function(e) {
+			/*
+			 * ! MODIFICATION START Following code was added by Igor Zhukov, in
+			 * order to prevent close on click on EmojiMenu scrollbar
+			 */
+			e = e.originalEvent || e;
+			var target = e.originalTarget || e.target || window;
+			while (target && target != window) {
+				target = target.parentNode;
+				if (target == self.$menu[0] || self.emojiarea
+						&& target == self.emojiarea.$button[0]) {
+					return;
+				}
+			}
+			/* ! MODIFICATION END */
+			self.hide();
+		});
+
+		$window.on('resize', function() {
+			if (self.visible)
+				self.reposition();
+		});
+
+		this.$menu.on('mouseup', 'a', function(e) {
+			e.stopPropagation();
+			return false;
+		});
+
+		this.$menu.on('click', 'a', function(e) {
+			/*
+			 * ! MODIFICATION START Following code was modified by Andre Staltz,
+			 * to capture clicks on category tabs and change the category
+			 * selection.
+			 */
+			if ($(this).hasClass('emoji-menu-tab')) {
+				if (self.getTabIndex(this) !== self.currentCategory) {
+					self.selectCategory(self.getTabIndex(this));
+				}
+				return false;
+			}
+			/* ! MODIFICATION END */
+			var emoji = $('.label', $(this)).text();
+			window.setTimeout(function() {
+				self.onItemSelected(emoji);
+				/*
+				 * ! MODIFICATION START Following code was modified by Igor
+				 * Zhukov, in order to close only on ctrl-, alt- emoji select
+				 */
+				if (e.ctrlKey || e.metaKey) {
+					self.hide();
+				}
+				/* ! MODIFICATION END */
+			}, 0);
+			e.stopPropagation();
+			return false;
+		});
+
+		/*
+		 * MODIFICATION: Following line was modified by Andre Staltz, in order
+		 * to select a default category.
+		 */
+		this.selectCategory(0);
+	};
+
+	/*
+	 * ! MODIFICATION START Following code was added by Andre Staltz, to
+	 * implement category selection.
+	 */
+	EmojiMenu.prototype.getTabIndex = function(tab) {
+		return this.$categoryTabs.find('.emoji-menu-tab').index(tab);
+	};
+
+	EmojiMenu.prototype.selectCategory = function(category) {
+		var self = this;
+		this.$categoryTabs.find('.emoji-menu-tab').each(function(index) {
+			if (index === category) {
+				this.className += '-selected';
+			} else {
+				this.className = this.className.replace('-selected', '');
+			}
+		});
+		this.currentCategory = category;
+		this.load(category);
+
+
+		 if (!Config.Mobile) { this.$itemsWrap.nanoScroller({ scroll: 'top'
+		 }); }
+
+
+
+	};
+	/* ! MODIFICATION END */
+
+	EmojiMenu.prototype.onItemSelected = function(emoji) {
+		console.log("select");
+		this.emojiarea.insert(emoji);
+		// $.emojiarea.insert(emoji);
+	};
+
+	/*
+	 * MODIFICATION: The following function argument was modified by Andre
+	 * Staltz, in order to load only icons from a category. Also function was
+	 * modified by Igor Zhukov in order to display recent emojis from
+	 * localStorage
+	 */
+	EmojiMenu.prototype.load = function(category) {
+		var html = [];
+		var options = $.emojiarea.icons;
+		var path = $.emojiarea.path;
+		var self = this;
+		if (path.length && path.charAt(path.length - 1) !== '/') {
+			path += '/';
+		}
+
+		/*
+		 * ! MODIFICATION: Following function was added by Igor Zhukov, in order
+		 * to add scrollbars to EmojiMenu
+		 */
+		var updateItems = function() {
+			self.$items.html(html.join(''));
+
+
+			  if (!Config.Mobile) { setTimeout(function () {
+			  self.$itemsWrap.nanoScroller(); }, 100); }
+
+		}
+
+		if (category > 0) {
+			for ( var key in options) {
+				/*
+				 * MODIFICATION: The following 2 lines were modified by Andre
+				 * Staltz, in order to load only icons from the specified
+				 * category.
+				 */
+				if (options.hasOwnProperty(key)
+						&& options[key][0] === (category - 1)) {
+					html.push('<a href="javascript:void(0)" title="'
+							+ util.htmlEntities(key) + '">'
+							+ EmojiArea.createIcon(options[key], true)
+							+ '<span class="label">' + util.htmlEntities(key)
+							+ '</span></a>');
+				}
+			}
+			updateItems();
+		} else {
+			ConfigStorage.get('emojis_recent', function(curEmojis) {
+				curEmojis = curEmojis || defaultRecentEmojis || [];
+				var key, i;
+				for (i = 0; i < curEmojis.length; i++) {
+					key = curEmojis[i]
+					if (options[key]) {
+						html.push('<a href="javascript:void(0)" title="'
+								+ util.htmlEntities(key) + '">'
+								+ EmojiArea.createIcon(options[key], true)
+								+ '<span class="label">'
+								+ util.htmlEntities(key) + '</span></a>');
+					}
+				}
+				updateItems();
+			});
+		}
+	};
+
+	EmojiMenu.prototype.reposition = function() {
+		var $button = this.emojiarea.$button;
+		var offset = $button.offset();
+		offset.top += $button.outerHeight();
+		offset.left += Math.round($button.outerWidth() / 2);
+
+		this.$menu.css({
+			top : offset.top,
+			left : offset.left
+		});
+	};
+
+	EmojiMenu.prototype.hide = function(callback) {
+		if (this.emojiarea) {
+			this.emojiarea.menu = null;
+			this.emojiarea.$button.removeClass('on');
+			this.emojiarea = null;
+		}
+
+		this.visible = false;
+		this.$menu.hide("fast");
+	};
+
+	EmojiMenu.prototype.show = function(emojiarea) {
+		/*
+		 * MODIFICATION: Following line was modified by Igor Zhukov, in order to
+		 * improve EmojiMenu behaviour
+		 */
+		if (this.emojiarea && this.emojiarea === emojiarea)
+			return this.hide();
+		emojiarea.$button.addClass('on');
+		this.emojiarea = emojiarea;
+		this.emojiarea.menu = this;
+
+		this.reposition();
+		this.$menu.show("fast");
+		/*
+		 * MODIFICATION: Following 3 lines were added by Igor Zhukov, in order
+		 * to update EmojiMenu contents
+		 */
+		if (!this.currentCategory) {
+			this.load(0);
+		}
+		this.visible = true;
+	};
+
+	EmojiMenu.show = (function() {
+		var menu = null;
+		return function(emojiarea) {
+			menu = menu || new EmojiMenu();
+			menu.show(emojiarea);
+		};
+	})();
+
+})(jQuery, window, document);
+
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
+/*! nanoScrollerJS - v0.8.4 - 2014
+* http://jamesflorentino.github.com/nanoScrollerJS/
+* Copyright (c) 2014 James Florentino; Licensed MIT */
+(function($, window, document) {
+  "use strict";
+  var BROWSER_IS_IE7, BROWSER_SCROLLBAR_WIDTH, DOMSCROLL, DOWN, DRAG, ENTER, KEYDOWN, KEYUP, MOUSEDOWN, MOUSEENTER, MOUSEMOVE, MOUSEUP, MOUSEWHEEL, NanoScroll, PANEDOWN, RESIZE, SCROLL, SCROLLBAR, TOUCHMOVE, UP, WHEEL, cAF, defaults, getBrowserScrollbarWidth, hasTransform, isFFWithBuggyScrollbar, rAF, transform, _elementStyle, _prefixStyle, _vendor;
+  defaults = {
+
+    /**
+      a classname for the pane element.
+      @property paneClass
+      @type String
+      @default 'nano-pane'
+     */
+    paneClass: 'nano-pane',
+
+    /**
+      a classname for the slider element.
+      @property sliderClass
+      @type String
+      @default 'nano-slider'
+     */
+    sliderClass: 'nano-slider',
+
+    /**
+      a classname for the content element.
+      @property contentClass
+      @type String
+      @default 'nano-content'
+     */
+    contentClass: 'nano-content',
+
+    /**
+      a setting to enable native scrolling in iOS devices.
+      @property iOSNativeScrolling
+      @type Boolean
+      @default false
+     */
+    iOSNativeScrolling: false,
+
+    /**
+      a setting to prevent the rest of the page being
+      scrolled when user scrolls the `.content` element.
+      @property preventPageScrolling
+      @type Boolean
+      @default false
+     */
+    preventPageScrolling: false,
+
+    /**
+      a setting to disable binding to the resize event.
+      @property disableResize
+      @type Boolean
+      @default false
+     */
+    disableResize: false,
+
+    /**
+      a setting to make the scrollbar always visible.
+      @property alwaysVisible
+      @type Boolean
+      @default false
+     */
+    alwaysVisible: false,
+
+    /**
+      a default timeout for the `flash()` method.
+      @property flashDelay
+      @type Number
+      @default 1500
+     */
+    flashDelay: 1500,
+
+    /**
+      a minimum height for the `.slider` element.
+      @property sliderMinHeight
+      @type Number
+      @default 20
+     */
+    sliderMinHeight: 20,
+
+    /**
+      a maximum height for the `.slider` element.
+      @property sliderMaxHeight
+      @type Number
+      @default null
+     */
+    sliderMaxHeight: null,
+
+    /**
+      an alternate document context.
+      @property documentContext
+      @type Document
+      @default null
+     */
+    documentContext: null,
+
+    /**
+      an alternate window context.
+      @property windowContext
+      @type Window
+      @default null
+     */
+    windowContext: null
+  };
+
+  /**
+    @property SCROLLBAR
+    @type String
+    @static
+    @final
+    @private
+   */
+  SCROLLBAR = 'scrollbar';
+
+  /**
+    @property SCROLL
+    @type String
+    @static
+    @final
+    @private
+   */
+  SCROLL = 'scroll';
+
+  /**
+    @property MOUSEDOWN
+    @type String
+    @final
+    @private
+   */
+  MOUSEDOWN = 'mousedown';
+
+  /**
+    @property MOUSEENTER
+    @type String
+    @final
+    @private
+   */
+  MOUSEENTER = 'mouseenter';
+
+  /**
+    @property MOUSEMOVE
+    @type String
+    @static
+    @final
+    @private
+   */
+  MOUSEMOVE = 'mousemove';
+
+  /**
+    @property MOUSEWHEEL
+    @type String
+    @final
+    @private
+   */
+  MOUSEWHEEL = 'mousewheel';
+
+  /**
+    @property MOUSEUP
+    @type String
+    @static
+    @final
+    @private
+   */
+  MOUSEUP = 'mouseup';
+
+  /**
+    @property RESIZE
+    @type String
+    @final
+    @private
+   */
+  RESIZE = 'resize';
+
+  /**
+    @property DRAG
+    @type String
+    @static
+    @final
+    @private
+   */
+  DRAG = 'drag';
+
+  /**
+    @property ENTER
+    @type String
+    @static
+    @final
+    @private
+   */
+  ENTER = 'enter';
+
+  /**
+    @property UP
+    @type String
+    @static
+    @final
+    @private
+   */
+  UP = 'up';
+
+  /**
+    @property PANEDOWN
+    @type String
+    @static
+    @final
+    @private
+   */
+  PANEDOWN = 'panedown';
+
+  /**
+    @property DOMSCROLL
+    @type String
+    @static
+    @final
+    @private
+   */
+  DOMSCROLL = 'DOMMouseScroll';
+
+  /**
+    @property DOWN
+    @type String
+    @static
+    @final
+    @private
+   */
+  DOWN = 'down';
+
+  /**
+    @property WHEEL
+    @type String
+    @static
+    @final
+    @private
+   */
+  WHEEL = 'wheel';
+
+  /**
+    @property KEYDOWN
+    @type String
+    @static
+    @final
+    @private
+   */
+  KEYDOWN = 'keydown';
+
+  /**
+    @property KEYUP
+    @type String
+    @static
+    @final
+    @private
+   */
+  KEYUP = 'keyup';
+
+  /**
+    @property TOUCHMOVE
+    @type String
+    @static
+    @final
+    @private
+   */
+  TOUCHMOVE = 'touchmove';
+
+  /**
+    @property BROWSER_IS_IE7
+    @type Boolean
+    @static
+    @final
+    @private
+   */
+  BROWSER_IS_IE7 = window.navigator.appName === 'Microsoft Internet Explorer' && /msie 7./i.test(window.navigator.appVersion) && window.ActiveXObject;
+
+  /**
+    @property BROWSER_SCROLLBAR_WIDTH
+    @type Number
+    @static
+    @default null
+    @private
+   */
+  BROWSER_SCROLLBAR_WIDTH = null;
+  rAF = window.requestAnimationFrame;
+  cAF = window.cancelAnimationFrame;
+  _elementStyle = document.createElement('div').style;
+  _vendor = (function() {
+    var i, transform, vendor, vendors, _i, _len;
+    vendors = ['t', 'webkitT', 'MozT', 'msT', 'OT'];
+    for (i = _i = 0, _len = vendors.length; _i < _len; i = ++_i) {
+      vendor = vendors[i];
+      transform = vendors[i] + 'ransform';
+      if (transform in _elementStyle) {
+        return vendors[i].substr(0, vendors[i].length - 1);
+      }
+    }
+    return false;
+  })();
+  _prefixStyle = function(style) {
+    if (_vendor === false) {
+      return false;
+    }
+    if (_vendor === '') {
+      return style;
+    }
+    return _vendor + style.charAt(0).toUpperCase() + style.substr(1);
+  };
+  transform = _prefixStyle('transform');
+  hasTransform = transform !== false;
+
+  /**
+    Returns browser's native scrollbar width
+    @method getBrowserScrollbarWidth
+    @return {Number} the scrollbar width in pixels
+    @static
+    @private
+   */
+  getBrowserScrollbarWidth = function() {
+    var outer, outerStyle, scrollbarWidth;
+    outer = document.createElement('div');
+    outerStyle = outer.style;
+    outerStyle.position = 'absolute';
+    outerStyle.width = '100px';
+    outerStyle.height = '100px';
+    outerStyle.overflow = SCROLL;
+    outerStyle.top = '-9999px';
+    document.body.appendChild(outer);
+    scrollbarWidth = outer.offsetWidth - outer.clientWidth;
+    document.body.removeChild(outer);
+    return scrollbarWidth;
+  };
+  isFFWithBuggyScrollbar = function() {
+    var isOSXFF, ua, version;
+    ua = window.navigator.userAgent;
+    isOSXFF = /(?=.+Mac OS X)(?=.+Firefox)/.test(ua);
+    if (!isOSXFF) {
+      return false;
+    }
+    version = /Firefox\/\d{2}\./.exec(ua);
+    if (version) {
+      version = version[0].replace(/\D+/g, '');
+    }
+    return isOSXFF && +version > 23;
+  };
+
+  /**
+    @class NanoScroll
+    @param element {HTMLElement|Node} the main element
+    @param options {Object} nanoScroller's options
+    @constructor
+   */
+  NanoScroll = (function() {
+    function NanoScroll(el, options) {
+      this.el = el;
+      this.options = options;
+      BROWSER_SCROLLBAR_WIDTH || (BROWSER_SCROLLBAR_WIDTH = getBrowserScrollbarWidth());
+      this.$el = $(this.el);
+      this.doc = $(this.options.documentContext || document);
+      this.win = $(this.options.windowContext || window);
+      this.body = this.doc.find('body');
+      this.$content = this.$el.children("." + options.contentClass);
+      this.$content.attr('tabindex', this.options.tabIndex || 0);
+      this.content = this.$content[0];
+      this.previousPosition = 0;
+      if (this.options.iOSNativeScrolling && (this.el.style.WebkitOverflowScrolling != null || navigator.userAgent.match(/mobi.+Gecko/i))) {
+        this.nativeScrolling();
+      } else {
+        this.generate();
+      }
+      this.createEvents();
+      this.addEvents();
+      this.reset();
+    }
+
+
+    /**
+      Prevents the rest of the page being scrolled
+      when user scrolls the `.nano-content` element.
+      @method preventScrolling
+      @param event {Event}
+      @param direction {String} Scroll direction (up or down)
+      @private
+     */
+
+    NanoScroll.prototype.preventScrolling = function(e, direction) {
+      if (!this.isActive) {
+        return;
+      }
+      if (e.type === DOMSCROLL) {
+        if (direction === DOWN && e.originalEvent.detail > 0 || direction === UP && e.originalEvent.detail < 0) {
+          e.preventDefault();
+        }
+      } else if (e.type === MOUSEWHEEL) {
+        if (!e.originalEvent || !e.originalEvent.wheelDelta) {
+          return;
+        }
+        if (direction === DOWN && e.originalEvent.wheelDelta < 0 || direction === UP && e.originalEvent.wheelDelta > 0) {
+          e.preventDefault();
+        }
+      }
+    };
+
+
+    /**
+      Enable iOS native scrolling
+      @method nativeScrolling
+      @private
+     */
+
+    NanoScroll.prototype.nativeScrolling = function() {
+      this.$content.css({
+        WebkitOverflowScrolling: 'touch'
+      });
+      this.iOSNativeScrolling = true;
+      this.isActive = true;
+    };
+
+
+    /**
+      Updates those nanoScroller properties that
+      are related to current scrollbar position.
+      @method updateScrollValues
+      @private
+     */
+
+    NanoScroll.prototype.updateScrollValues = function() {
+      var content, direction;
+      content = this.content;
+      this.maxScrollTop = content.scrollHeight - content.clientHeight;
+      this.prevScrollTop = this.contentScrollTop || 0;
+      this.contentScrollTop = content.scrollTop;
+      direction = this.contentScrollTop > this.previousPosition ? "down" : this.contentScrollTop < this.previousPosition ? "up" : "same";
+      this.previousPosition = this.contentScrollTop;
+      if (direction !== "same") {
+        this.$el.trigger('update', {
+          position: this.contentScrollTop,
+          maximum: this.maxScrollTop,
+          direction: direction
+        });
+      }
+      if (!this.iOSNativeScrolling) {
+        this.maxSliderTop = this.paneHeight - this.sliderHeight;
+        this.sliderTop = this.maxScrollTop === 0 ? 0 : this.contentScrollTop * this.maxSliderTop / this.maxScrollTop;
+      }
+    };
+
+
+    /**
+      Updates CSS styles for current scroll position.
+      Uses CSS 2d transfroms and `window.requestAnimationFrame` if available.
+      @method setOnScrollStyles
+      @private
+     */
+
+    NanoScroll.prototype.setOnScrollStyles = function() {
+      var cssValue;
+      if (hasTransform) {
+        cssValue = {};
+        cssValue[transform] = "translate(0, " + this.sliderTop + "px)";
+      } else {
+        cssValue = {
+          top: this.sliderTop
+        };
+      }
+      if (rAF) {
+        if (cAF && this.scrollRAF) {
+          cAF(this.scrollRAF);
+        }
+        this.scrollRAF = rAF((function(_this) {
+          return function() {
+            _this.scrollRAF = null;
+            return _this.slider.css(cssValue);
+          };
+        })(this));
+      } else {
+        this.slider.css(cssValue);
+      }
+    };
+
+
+    /**
+      Creates event related methods
+      @method createEvents
+      @private
+     */
+
+    NanoScroll.prototype.createEvents = function() {
+      this.events = {
+        down: (function(_this) {
+          return function(e) {
+            _this.isBeingDragged = true;
+            _this.offsetY = e.pageY - _this.slider.offset().top;
+            if (!_this.slider.is(e.target)) {
+              _this.offsetY = 0;
+            }
+            _this.pane.addClass('active');
+            _this.doc.bind(MOUSEMOVE, _this.events[DRAG]).bind(MOUSEUP, _this.events[UP]);
+            _this.body.bind(MOUSEENTER, _this.events[ENTER]);
+            return false;
+          };
+        })(this),
+        drag: (function(_this) {
+          return function(e) {
+            _this.sliderY = e.pageY - _this.$el.offset().top - _this.paneTop - (_this.offsetY || _this.sliderHeight * 0.5);
+            _this.scroll();
+            if (_this.contentScrollTop >= _this.maxScrollTop && _this.prevScrollTop !== _this.maxScrollTop) {
+              _this.$el.trigger('scrollend');
+            } else if (_this.contentScrollTop === 0 && _this.prevScrollTop !== 0) {
+              _this.$el.trigger('scrolltop');
+            }
+            return false;
+          };
+        })(this),
+        up: (function(_this) {
+          return function(e) {
+            _this.isBeingDragged = false;
+            _this.pane.removeClass('active');
+            _this.doc.unbind(MOUSEMOVE, _this.events[DRAG]).unbind(MOUSEUP, _this.events[UP]);
+            _this.body.unbind(MOUSEENTER, _this.events[ENTER]);
+            return false;
+          };
+        })(this),
+        resize: (function(_this) {
+          return function(e) {
+            _this.reset();
+          };
+        })(this),
+        panedown: (function(_this) {
+          return function(e) {
+            _this.sliderY = (e.offsetY || e.originalEvent.layerY) - (_this.sliderHeight * 0.5);
+            _this.scroll();
+            _this.events.down(e);
+            return false;
+          };
+        })(this),
+        scroll: (function(_this) {
+          return function(e) {
+            _this.updateScrollValues();
+            if (_this.isBeingDragged) {
+              return;
+            }
+            if (!_this.iOSNativeScrolling) {
+              _this.sliderY = _this.sliderTop;
+              _this.setOnScrollStyles();
+            }
+            if (e == null) {
+              return;
+            }
+            if (_this.contentScrollTop >= _this.maxScrollTop) {
+              if (_this.options.preventPageScrolling) {
+                _this.preventScrolling(e, DOWN);
+              }
+              if (_this.prevScrollTop !== _this.maxScrollTop) {
+                _this.$el.trigger('scrollend');
+              }
+            } else if (_this.contentScrollTop === 0) {
+              if (_this.options.preventPageScrolling) {
+                _this.preventScrolling(e, UP);
+              }
+              if (_this.prevScrollTop !== 0) {
+                _this.$el.trigger('scrolltop');
+              }
+            }
+          };
+        })(this),
+        wheel: (function(_this) {
+          return function(e) {
+            var delta;
+            if (e == null) {
+              return;
+            }
+            delta = e.delta || e.wheelDelta || (e.originalEvent && e.originalEvent.wheelDelta) || -e.detail || (e.originalEvent && -e.originalEvent.detail);
+            if (delta) {
+              _this.sliderY += -delta / 3;
+            }
+            _this.scroll();
+            return false;
+          };
+        })(this),
+        enter: (function(_this) {
+          return function(e) {
+            var _ref;
+            if (!_this.isBeingDragged) {
+              return;
+            }
+            if ((e.buttons || e.which) !== 1) {
+              return (_ref = _this.events)[UP].apply(_ref, arguments);
+            }
+          };
+        })(this)
+      };
+    };
+
+
+    /**
+      Adds event listeners with jQuery.
+      @method addEvents
+      @private
+     */
+
+    NanoScroll.prototype.addEvents = function() {
+      var events;
+      this.removeEvents();
+      events = this.events;
+      if (!this.options.disableResize) {
+        this.win.bind(RESIZE, events[RESIZE]);
+      }
+      if (!this.iOSNativeScrolling) {
+        this.slider.bind(MOUSEDOWN, events[DOWN]);
+        this.pane.bind(MOUSEDOWN, events[PANEDOWN]).bind("" + MOUSEWHEEL + " " + DOMSCROLL, events[WHEEL]);
+      }
+      this.$content.bind("" + SCROLL + " " + MOUSEWHEEL + " " + DOMSCROLL + " " + TOUCHMOVE, events[SCROLL]);
+    };
+
+
+    /**
+      Removes event listeners with jQuery.
+      @method removeEvents
+      @private
+     */
+
+    NanoScroll.prototype.removeEvents = function() {
+      var events;
+      events = this.events;
+      this.win.unbind(RESIZE, events[RESIZE]);
+      if (!this.iOSNativeScrolling) {
+        this.slider.unbind();
+        this.pane.unbind();
+      }
+      this.$content.unbind("" + SCROLL + " " + MOUSEWHEEL + " " + DOMSCROLL + " " + TOUCHMOVE, events[SCROLL]);
+    };
+
+
+    /**
+      Generates nanoScroller's scrollbar and elements for it.
+      @method generate
+      @chainable
+      @private
+     */
+
+    NanoScroll.prototype.generate = function() {
+      var contentClass, cssRule, currentPadding, options, pane, paneClass, sliderClass;
+      options = this.options;
+      paneClass = options.paneClass, sliderClass = options.sliderClass, contentClass = options.contentClass;
+      if (!(pane = this.$el.children("." + paneClass)).length && !pane.children("." + sliderClass).length) {
+        this.$el.append("<div class=\"" + paneClass + "\"><div class=\"" + sliderClass + "\" /></div>");
+      }
+      this.pane = this.$el.children("." + paneClass);
+      this.slider = this.pane.find("." + sliderClass);
+      if (BROWSER_SCROLLBAR_WIDTH === 0 && isFFWithBuggyScrollbar()) {
+        currentPadding = window.getComputedStyle(this.content, null).getPropertyValue('padding-right').replace(/[^0-9.]+/g, '');
+        cssRule = {
+          right: -14,
+          paddingRight: +currentPadding + 14
+        };
+      } else if (BROWSER_SCROLLBAR_WIDTH) {
+        cssRule = {
+          right: -BROWSER_SCROLLBAR_WIDTH
+        };
+        this.$el.addClass('has-scrollbar');
+      }
+      if (cssRule != null) {
+        this.$content.css(cssRule);
+      }
+      return this;
+    };
+
+
+    /**
+      @method restore
+      @private
+     */
+
+    NanoScroll.prototype.restore = function() {
+      this.stopped = false;
+      if (!this.iOSNativeScrolling) {
+        this.pane.show();
+      }
+      this.addEvents();
+    };
+
+
+    /**
+      Resets nanoScroller's scrollbar.
+      @method reset
+      @chainable
+      @example
+          $(".nano").nanoScroller();
+     */
+
+    NanoScroll.prototype.reset = function() {
+      var content, contentHeight, contentPosition, contentStyle, contentStyleOverflowY, paneBottom, paneHeight, paneOuterHeight, paneTop, parentMaxHeight, right, sliderHeight;
+      if (this.iOSNativeScrolling) {
+        this.contentHeight = this.content.scrollHeight;
+        return;
+      }
+      if (!this.$el.find("." + this.options.paneClass).length) {
+        this.generate().stop();
+      }
+      if (this.stopped) {
+        this.restore();
+      }
+      content = this.content;
+      contentStyle = content.style;
+      contentStyleOverflowY = contentStyle.overflowY;
+      if (BROWSER_IS_IE7) {
+        this.$content.css({
+          height: this.$content.height()
+        });
+      }
+      contentHeight = content.scrollHeight + BROWSER_SCROLLBAR_WIDTH;
+      parentMaxHeight = parseInt(this.$el.css("max-height"), 10);
+      if (parentMaxHeight > 0) {
+        this.$el.height("");
+        this.$el.height(content.scrollHeight > parentMaxHeight ? parentMaxHeight : content.scrollHeight);
+      }
+      paneHeight = this.pane.outerHeight(false);
+      paneTop = parseInt(this.pane.css('top'), 10);
+      paneBottom = parseInt(this.pane.css('bottom'), 10);
+      paneOuterHeight = paneHeight + paneTop + paneBottom;
+      sliderHeight = Math.round(paneOuterHeight / contentHeight * paneOuterHeight);
+      if (sliderHeight < this.options.sliderMinHeight) {
+        sliderHeight = this.options.sliderMinHeight;
+      } else if ((this.options.sliderMaxHeight != null) && sliderHeight > this.options.sliderMaxHeight) {
+        sliderHeight = this.options.sliderMaxHeight;
+      }
+      if (contentStyleOverflowY === SCROLL && contentStyle.overflowX !== SCROLL) {
+        sliderHeight += BROWSER_SCROLLBAR_WIDTH;
+      }
+      this.maxSliderTop = paneOuterHeight - sliderHeight;
+      this.contentHeight = contentHeight;
+      this.paneHeight = paneHeight;
+      this.paneOuterHeight = paneOuterHeight;
+      this.sliderHeight = sliderHeight;
+      this.paneTop = paneTop;
+      this.slider.height(sliderHeight);
+      this.events.scroll();
+      this.pane.show();
+      this.isActive = true;
+      if ((content.scrollHeight === content.clientHeight) || (this.pane.outerHeight(true) >= content.scrollHeight && contentStyleOverflowY !== SCROLL)) {
+        this.pane.hide();
+        this.isActive = false;
+      } else if (this.el.clientHeight === content.scrollHeight && contentStyleOverflowY === SCROLL) {
+        this.slider.hide();
+      } else {
+        this.slider.show();
+      }
+      this.pane.css({
+        opacity: (this.options.alwaysVisible ? 1 : ''),
+        visibility: (this.options.alwaysVisible ? 'visible' : '')
+      });
+      contentPosition = this.$content.css('position');
+      if (contentPosition === 'static' || contentPosition === 'relative') {
+        right = parseInt(this.$content.css('right'), 10);
+        if (right) {
+          this.$content.css({
+            right: '',
+            marginRight: right
+          });
+        }
+      }
+      return this;
+    };
+
+
+    /**
+      @method scroll
+      @private
+      @example
+          $(".nano").nanoScroller({ scroll: 'top' });
+     */
+
+    NanoScroll.prototype.scroll = function() {
+      if (!this.isActive) {
+        return;
+      }
+      this.sliderY = Math.max(0, this.sliderY);
+      this.sliderY = Math.min(this.maxSliderTop, this.sliderY);
+      this.$content.scrollTop(this.maxScrollTop * this.sliderY / this.maxSliderTop);
+      if (!this.iOSNativeScrolling) {
+        this.updateScrollValues();
+        this.setOnScrollStyles();
+      }
+      return this;
+    };
+
+
+    /**
+      Scroll at the bottom with an offset value
+      @method scrollBottom
+      @param offsetY {Number}
+      @chainable
+      @example
+          $(".nano").nanoScroller({ scrollBottom: value });
+     */
+
+    NanoScroll.prototype.scrollBottom = function(offsetY) {
+      if (!this.isActive) {
+        return;
+      }
+      this.$content.scrollTop(this.contentHeight - this.$content.height() - offsetY).trigger(MOUSEWHEEL);
+      this.stop().restore();
+      return this;
+    };
+
+
+    /**
+      Scroll at the top with an offset value
+      @method scrollTop
+      @param offsetY {Number}
+      @chainable
+      @example
+          $(".nano").nanoScroller({ scrollTop: value });
+     */
+
+    NanoScroll.prototype.scrollTop = function(offsetY) {
+      if (!this.isActive) {
+        return;
+      }
+      this.$content.scrollTop(+offsetY).trigger(MOUSEWHEEL);
+      this.stop().restore();
+      return this;
+    };
+
+
+    /**
+      Scroll to an element
+      @method scrollTo
+      @param node {Node} A node to scroll to.
+      @chainable
+      @example
+          $(".nano").nanoScroller({ scrollTo: $('#a_node') });
+     */
+
+    NanoScroll.prototype.scrollTo = function(node) {
+      if (!this.isActive) {
+        return;
+      }
+      this.scrollTop(this.$el.find(node).get(0).offsetTop);
+      return this;
+    };
+
+
+    /**
+      To stop the operation.
+      This option will tell the plugin to disable all event bindings and hide the gadget scrollbar from the UI.
+      @method stop
+      @chainable
+      @example
+          $(".nano").nanoScroller({ stop: true });
+     */
+
+    NanoScroll.prototype.stop = function() {
+      if (cAF && this.scrollRAF) {
+        cAF(this.scrollRAF);
+        this.scrollRAF = null;
+      }
+      this.stopped = true;
+      this.removeEvents();
+      if (!this.iOSNativeScrolling) {
+        this.pane.hide();
+      }
+      return this;
+    };
+
+
+    /**
+      Destroys nanoScroller and restores browser's native scrollbar.
+      @method destroy
+      @chainable
+      @example
+          $(".nano").nanoScroller({ destroy: true });
+     */
+
+    NanoScroll.prototype.destroy = function() {
+      if (!this.stopped) {
+        this.stop();
+      }
+      if (!this.iOSNativeScrolling && this.pane.length) {
+        this.pane.remove();
+      }
+      if (BROWSER_IS_IE7) {
+        this.$content.height('');
+      }
+      this.$content.removeAttr('tabindex');
+      if (this.$el.hasClass('has-scrollbar')) {
+        this.$el.removeClass('has-scrollbar');
+        this.$content.css({
+          right: ''
+        });
+      }
+      return this;
+    };
+
+
+    /**
+      To flash the scrollbar gadget for an amount of time defined in plugin settings (defaults to 1,5s).
+      Useful if you want to show the user (e.g. on pageload) that there is more content waiting for him.
+      @method flash
+      @chainable
+      @example
+          $(".nano").nanoScroller({ flash: true });
+     */
+
+    NanoScroll.prototype.flash = function() {
+      if (this.iOSNativeScrolling) {
+        return;
+      }
+      if (!this.isActive) {
+        return;
+      }
+      this.reset();
+      this.pane.addClass('flashed');
+      setTimeout((function(_this) {
+        return function() {
+          _this.pane.removeClass('flashed');
+        };
+      })(this), this.options.flashDelay);
+      return this;
+    };
+
+    return NanoScroll;
+
+  })();
+  $.fn.nanoScroller = function(settings) {
+    return this.each(function() {
+      var options, scrollbar;
+      if (!(scrollbar = this.nanoscroller)) {
+        options = $.extend({}, defaults, settings);
+        this.nanoscroller = scrollbar = new NanoScroll(this, options);
+      }
+      if (settings && typeof settings === "object") {
+        $.extend(scrollbar.options, settings);
+        if (settings.scrollBottom != null) {
+          return scrollbar.scrollBottom(settings.scrollBottom);
+        }
+        if (settings.scrollTop != null) {
+          return scrollbar.scrollTop(settings.scrollTop);
+        }
+        if (settings.scrollTo) {
+          return scrollbar.scrollTo(settings.scrollTo);
+        }
+        if (settings.scroll === 'bottom') {
+          return scrollbar.scrollBottom(0);
+        }
+        if (settings.scroll === 'top') {
+          return scrollbar.scrollTop(0);
+        }
+        if (settings.scroll && settings.scroll instanceof $) {
+          return scrollbar.scrollTo(settings.scroll);
+        }
+        if (settings.stop) {
+          return scrollbar.stop();
+        }
+        if (settings.destroy) {
+          return scrollbar.destroy();
+        }
+        if (settings.flash) {
+          return scrollbar.flash();
+        }
+      }
+      return scrollbar.reset();
+    });
+  };
+  $.fn.nanoScroller.Constructor = NanoScroll;
+})(jQuery, window, document);
+
+
+/*! Angular Emoji 1.0.0 2014-12-27 */
+
+'use strict';
+    
+function cancelEvent (event) {
+  event = event || window.event;
+  if (event) {
+    event = event.originalEvent || event;
+
+    if (event.stopPropagation) event.stopPropagation();
+    if (event.preventDefault) event.preventDefault();
+  }
+
+  return false;
+}
+
+
+
+
+//ConfigStorage
+(function(window)
+{
+    var keyPrefix = '';
+    var noPrefix = false;
+    var cache = {};
+    var useCs = !!(window.chrome && chrome.storage && chrome.storage.local);
+    var useLs = !useCs && !!window.localStorage;
+
+    function storageSetPrefix(newPrefix)
+    {
+        keyPrefix = newPrefix;
+    }
+
+    function storageSetNoPrefix()
+    {
+        noPrefix = true;
+    }
+
+    function storageGetPrefix()
+    {
+        if (noPrefix)
+        {
+            noPrefix = false;
+            return '';
+        }
+        return keyPrefix;
+    }
+
+    function storageGetValue()
+    {
+        var keys = Array.prototype.slice.call(arguments),
+            callback = keys.pop(),
+            result = [],
+            single = keys.length == 1,
+            value,
+            allFound = true,
+            prefix = storageGetPrefix(),
+            i, key;
+
+        for (i = 0; i < keys.length; i++)
+        {
+            key = keys[i] = prefix + keys[i];
+            if (key.substr(0, 3) != 'xt_' && cache[key] !== undefined)
+            {
+                result.push(cache[key]);
+            }
+            else if (useLs)
+            {
+                try
+                {
+                    value = localStorage.getItem(key);
+                }
+                catch (e)
+                {
+                    useLs = false;
+                }
+                try
+                {
+                    value = (value === undefined || value === null) ? false : JSON.parse(value);
+                }
+                catch (e)
+                {
+                    value = false;
+                }
+                result.push(cache[key] = value);
+            }
+            else if (!useCs)
+            {
+                result.push(cache[key] = false);
+            }
+            else
+            {
+                allFound = false;
+            }
+        }
+
+        if (allFound)
+        {
+            return callback(single ? result[0] : result);
+        }
+
+        chrome.storage.local.get(keys, function(resultObj)
+        {
+            var value;
+            result = [];
+            for (i = 0; i < keys.length; i++)
+            {
+                key = keys[i];
+                value = resultObj[key];
+                value = value === undefined || value === null ? false : JSON.parse(value);
+                result.push(cache[key] = value);
+            }
+
+            callback(single ? result[0] : result);
+        });
+    };
+
+    function storageSetValue(obj, callback)
+    {
+        var keyValues = {},
+            prefix = storageGetPrefix(),
+            key, value;
+
+        for (key in obj)
+        {
+            if (obj.hasOwnProperty(key))
+            {
+                value = obj[key];
+                key = prefix + key;
+                cache[key] = value;
+                value = JSON.stringify(value);
+                if (useLs)
+                {
+                    try
+                    {
+                        localStorage.setItem(key, value);
+                    }
+                    catch (e)
+                    {
+                        useLs = false;
+                    }
+                }
+                else
+                {
+                    keyValues[key] = value;
+                }
+            }
+        }
+
+        if (useLs || !useCs)
+        {
+            if (callback)
+            {
+                callback();
+            }
+            return;
+        }
+
+        chrome.storage.local.set(keyValues, callback);
+    };
+
+    function storageRemoveValue()
+    {
+        var keys = Array.prototype.slice.call(arguments),
+            prefix = storageGetPrefix(),
+            i, key, callback;
+
+        if (typeof keys[keys.length - 1] === 'function')
+        {
+            callback = keys.pop();
+        }
+
+        for (i = 0; i < keys.length; i++)
+        {
+            key = keys[i] = prefix + keys[i];
+            delete cache[key];
+            if (useLs)
+            {
+                try
+                {
+                    localStorage.removeItem(key);
+                }
+                catch (e)
+                {
+                    useLs = false;
+                }
+            }
+        }
+        if (useCs)
+        {
+            chrome.storage.local.remove(keys, callback);
+        }
+        else if (callback)
+        {
+            callback();
+        }
+    };
+
+    window.ConfigStorage = {
+        prefix: storageSetPrefix,
+        noPrefix: storageSetNoPrefix,
+        get: storageGetValue,
+        set: storageSetValue,
+        remove: storageRemoveValue
+    };
+
+
+})(this);
+
+
