@@ -3548,7 +3548,7 @@ function buildMap()
 'use strict';
 
 var emojiApp = angular.module("emojiApp", ['ngSanitize']);
-
+window.emojiApp = emojiApp;
 emojiApp.config(['$sceProvider', function($sceProvider)
 {
 
