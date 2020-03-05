@@ -3795,7 +3795,9 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
                       {
                           $timeout.cancel(updatePromise);
                           updateValue();
-                          // $scope.emojiMessage.replyToUser();
+                          if(typeof $scope.emojiMessage.replyToUser == "function"){
+                            $scope.emojiMessage.replyToUser();   
+                          }
                           // $(element).trigger('message_send');
                           resetTyping();
                           return cancelEvent(e);
