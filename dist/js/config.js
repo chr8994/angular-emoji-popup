@@ -3593,14 +3593,14 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 
       // Specify how UI should be updated
       ngModel.$render = function() {
-        console.log("check model");
-        console.log(ngModel.$viewValue);
+//         console.log("check model");
+//         console.log(ngModel.$viewValue);
         element.html(ngModel.$viewValue || '');
       };
 
       // Listen for change events to enable binding
       element.on('blur keyup change', function() {
-        console.log("change event");
+//         console.log("change event");
         scope.$evalAsync(read);
       });
       read(); // initialize
@@ -3608,8 +3608,8 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
       // Write data to the model
       function read() {
         var html = element.html();
-        console.log("from read function");
-        console.log(html);
+//         console.log("from read function");
+//         console.log(html);
         // When we clear the content editable the browser leaves a <br>
         // behind
         // If strip-br attribute is provided then we strip this out
@@ -3814,7 +3814,7 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
 
           function updateRichTextarea()
           {
-              console.log("updateRichTextarea");
+//               console.log("updateRichTextarea");
               if (richTextarea)
               {
                   $timeout.cancel(updatePromise);
@@ -3885,7 +3885,7 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
 
           function onPasteEvent(e)
           {
-              console.log("onPasteEvent");
+//               console.log("onPasteEvent");
               var cData = (e.originalEvent || e).clipboardData,
                   items = cData && cData.items || [],
                   files = [],
@@ -3976,9 +3976,9 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 
       // Write data to the model
       function read() {
-        console.log("FROM READY!!!");
+//         console.log("FROM READY!!!");
         var html = element.html();
-        console.log(html);
+//         console.log(html);
         // When we clear the content editable the browser leaves a <br>
         // behind
         // If strip-br attribute is provided then we strip this out
@@ -4063,7 +4063,7 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 	var util = {};
 
 	util.restoreSelection = (function() {
-		console.log("RESTORE SELECTION!!!!!!!!!!!!!!!");
+// 		console.log("RESTORE SELECTION!!!!!!!!!!!!!!!");
 		if (window.getSelection) {
 
 			return function(savedSelection) {
@@ -4109,8 +4109,8 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 
 				var node = typeof content === 'string' ? document
 						.createTextNode(content) : content;
-				console.log("NODE!");
-				console.log(node);
+// 				console.log("NODE!");
+// 				console.log(node);
 				if (sel.getRangeAt && sel.rangeCount) {
 					range = sel.getRangeAt(0);
 					range.deleteContents();
@@ -4123,15 +4123,15 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 						range.collapse(true);
 						sel.removeAllRanges();
 						sel.addRange(range);
-						console.log("ADDING RANGE");
-						console.log(range);
+// 						console.log("ADDING RANGE");
+// 						console.log(range);
 					}, 0);
 				}
 			}
 		} else if (document.selection && document.selection.createRange) {
 			return function(content) {
-				console.log("CONTENT IN ELSE");
-				console.log(content);
+// 				console.log("CONTENT IN ELSE");
+// 				console.log(content);
 				var range = document.selection.createRange();
 				if (typeof content === 'string') {
 					range.text = content;
@@ -4303,7 +4303,7 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 	};
 
 	EmojiArea_Plain.prototype.insert = function(emoji) {
-		console.log("on insert function");
+// 		console.log("on insert function");
 		if (!$.emojiarea.icons.hasOwnProperty(emoji))
 			return;
 		util.insertAtCursor(emoji, this.$textarea[0]);
@@ -4378,8 +4378,8 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 		 */
 
 		var html = this.$editor.text();
-		console.log("LINE 384");
-		console.log(html);
+// 		console.log("LINE 384");
+// 		console.log(html);
 		// var html = this.$editor.html();
 		var emojis = $.emojiarea.icons;
 		for ( var key in emojis) {
@@ -4444,10 +4444,10 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 		/*
 		 * MODIFICATION: Following line was modified by Andre Staltz, to use new
 		 * implementation of createIcon function.
-		 */
-		console.log("insert wysiwyg");
-		console.log("line 449 from window");
-		console.log($.emojiarea);
+// 		 */
+// 		console.log("insert wysiwyg");
+// 		console.log("line 449 from window");
+// 		console.log($.emojiarea);
 		var $img = $(EmojiArea.createIcon($.emojiarea.icons[emoji]));
 		if ($img[0].attachEvent) {
 			$img[0].attachEvent('onresizestart', function(e) {
@@ -4554,8 +4554,8 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 		var $window = $(window);
 
 		this.visible = false;
-		console.log("SETTING EMOJIAREA TO FALSE");
-		console.log(self.emojiarea);
+// 		console.log("SETTING EMOJIAREA TO FALSE");
+// 		console.log(self.emojiarea);
 		// console.log(emojiarea);
 		this.emojiarea = null;
 		this.$menu = $('<div>');
@@ -4707,7 +4707,7 @@ emojiApp.directive('contenteditable', [ '$sce', function($sce) {
 	/* ! MODIFICATION END */
 
 	EmojiMenu.prototype.onItemSelected = function(emoji) {
-		console.log("select");
+// 		console.log("select");
 		this.emojiarea.insert(emoji);
 		// $.emojiarea.insert(emoji);
 	};
