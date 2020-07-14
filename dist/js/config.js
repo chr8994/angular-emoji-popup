@@ -3796,7 +3796,7 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
                           $timeout.cancel(updatePromise);
                           updateValue();
                           if(typeof $scope.emojiMessage.replyToUser == "function"){
-                            $scope.emojiMessage.replyToUser();   
+                            $scope.emojiMessage.replyToUser();
                           }
                           // $(element).trigger('message_send');
                           resetTyping();
@@ -3935,6 +3935,10 @@ emojiApp.directive('emojiForm', ['$timeout', '$http', '$interpolate','$compile',
               });
           }
 
+          $scope.$watch("emojiMessage.rawhtml", function(nVal) {
+              $(richTextarea).html(nVal);
+          });
+          
           $scope.$on('$destroy', function cleanup()
           {
 
